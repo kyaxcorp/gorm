@@ -21,6 +21,10 @@ func preload(tx *gorm.DB, rel *schema.Relationship, conds []interface{}, preload
 		inlineConds      []interface{}
 	)
 
+	if reflectValue.Kind() == reflect.Interface {
+		reflectValue = reflect.ValueOf(reflectValue.Interface())
+	}
+
 	if rel.JoinTable != nil {
 		var (
 			joinForeignFields    = make([]*schema.Field, 0, len(rel.References))
