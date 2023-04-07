@@ -610,6 +610,25 @@ func TestUpdateFromSubQuery(t *testing.T) {
 	}
 }
 
+func TestIdempotentSave(t *testing.T) {
+	create := Company{
+		Name: "company_idempotent",
+	}
+	DB.Create(&create)
+
+	var company Company
+	if err := DB.Find(&company, "id = ?", create.ID).Error; err != nil {
+		t.Fatalf("failed to find created company, got err: %v", err)
+	}
+
+	if err := DB.Save(&company).Error; err != nil || company.ID != create.ID {
+		t.Errorf("failed to save company, got err: %v", err)
+	}
+	if err := DB.Save(&company).Error; err != nil || company.ID != create.ID {
+		t.Errorf("failed to save company, got err: %v", err)
+	}
+}
+
 func TestSave(t *testing.T) {
 	user := *GetUser("save", Config{})
 	DB.Create(&user)
@@ -772,4 +791,17 @@ func TestUpdateReturning(t *testing.T) {
 	if results[1].Age-results[0].Age != 100 {
 		t.Errorf("failed to return updated age column")
 	}
+}
+
+func TestUpdateWithDiffSchema(t *testing.T) {
+	user := GetUser("update-diff-schema-1", Config{})
+	DB.Create(&user)
+
+	type UserTemp struct {
+		Name string
+	}
+
+	err := DB.Model(&user).Updates(&UserTemp{Name: "update-diff-schema-2"}).Error
+	AssertEqual(t, err, nil)
+	AssertEqual(t, "update-diff-schema-2", user.Name)
 }

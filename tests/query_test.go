@@ -218,7 +218,7 @@ func TestFind(t *testing.T) {
 
 	// test array
 	var models2 [3]User
-	if err := DB.Where("name in (?)", []string{"find"}).Find(&models2).Error; err != nil || len(models2) != 3 {
+	if err := DB.Where("name in (?)", []string{"find"}).Find(&models2).Error; err != nil {
 		t.Errorf("errors happened when query find with in clause: %v, length: %v", err, len(models2))
 	} else {
 		for idx, user := range users {
@@ -230,7 +230,7 @@ func TestFind(t *testing.T) {
 
 	// test smaller array
 	var models3 [2]User
-	if err := DB.Where("name in (?)", []string{"find"}).Find(&models3).Error; err != nil || len(models3) != 2 {
+	if err := DB.Where("name in (?)", []string{"find"}).Find(&models3).Error; err != nil {
 		t.Errorf("errors happened when query find with in clause: %v, length: %v", err, len(models3))
 	} else {
 		for idx, user := range users[:2] {
@@ -1365,4 +1365,18 @@ func TestQueryResetNullValue(t *testing.T) {
 
 	AssertEqual(t, q1, qs[0])
 	AssertEqual(t, q2, qs[1])
+}
+
+func TestQueryError(t *testing.T) {
+	type P struct{}
+	var p1 P
+	err := DB.Take(&p1, 1).Error
+	AssertEqual(t, err, gorm.ErrModelAccessibleFieldsRequired)
+
+	var p2 interface{}
+
+	err = DB.Table("ps").Clauses(clause.Eq{Column: clause.Column{
+		Table: clause.CurrentTable, Name: clause.PrimaryKey,
+	}, Value: 1}).Scan(&p2).Error
+	AssertEqual(t, err, gorm.ErrModelValueRequired)
 }
