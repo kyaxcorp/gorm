@@ -62,6 +62,7 @@ type Field struct {
 	Creatable              bool
 	Updatable              bool
 	Readable               bool
+	UpdateOnSoftDelete     bool
 	AutoCreateTime         TimeType
 	AutoUpdateTime         TimeType
 	HasDefaultValue        bool
@@ -109,6 +110,7 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 		Creatable:              true,
 		Updatable:              true,
 		Readable:               true,
+		UpdateOnSoftDelete:     false,
 		PrimaryKey:             utils.CheckTruth(tagSetting["PRIMARYKEY"], tagSetting["PRIMARY_KEY"]),
 		AutoIncrement:          utils.CheckTruth(tagSetting["AUTOINCREMENT"]),
 		HasDefaultValue:        utils.CheckTruth(tagSetting["AUTOINCREMENT"]),
@@ -323,6 +325,10 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 		case reflect.Int32, reflect.Uint32, reflect.Float32:
 			field.Size = 32
 		}
+	}
+
+	if _, ok := field.TagSettings["UPDATEONSOFTDELETE"]; ok {
+		field.UpdateOnSoftDelete = true
 	}
 
 	// setup permission

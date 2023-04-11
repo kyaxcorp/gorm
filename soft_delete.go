@@ -141,9 +141,33 @@ func (sd SoftDeleteDeleteClause) MergeClause(*clause.Clause) {
 
 func (sd SoftDeleteDeleteClause) ModifyStatement(stmt *Statement) {
 	if stmt.SQL.Len() == 0 && !stmt.Statement.Unscoped {
+		// Read the tag
+		// Take the value from the Struct!
 		curTime := stmt.DB.NowFunc()
-		stmt.AddClause(clause.Set{{Column: clause.Column{Name: sd.Field.DBName}, Value: curTime}})
+
+		// Default Column/Value
+		var setColumns clause.Set = clause.Set{{Column: clause.Column{Name: sd.Field.DBName}, Value: curTime}}
 		stmt.SetColumn(sd.Field.DBName, curTime, true)
+
+		// Check if it's a struct or ptr struct
+		modelRefVal := reflect.ValueOf(stmt.Model)
+		if modelRefVal.Kind() == reflect.Ptr {
+			modelRefVal = reflect.Indirect(modelRefVal)
+		}
+
+		// Allow only if the model has been set
+		if stmt.Model != nil && stmt.Schema != nil {
+			// Add additional fields to update in the same operation!
+			for _, field := range stmt.Schema.Fields {
+				if field.UpdateOnSoftDelete {
+					fieldVal := modelRefVal.FieldByName(field.Name).Interface()
+					setColumns = append(setColumns, clause.Assignment{Column: clause.Column{Name: field.DBName}, Value: fieldVal})
+					stmt.SetColumn(field.DBName, fieldVal)
+				}
+			}
+		}
+
+		stmt.AddClause(setColumns)
 
 		if stmt.Schema != nil {
 			_, queryValues := schema.GetIdentityFieldValuesMap(stmt.Context, stmt.ReflectValue, stmt.Schema.PrimaryFields)
